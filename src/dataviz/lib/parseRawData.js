@@ -45,10 +45,10 @@ function parseRawData(response){
 function resultFromAnalysisType(response, indexTarget) {
   switch(response.analysisType) {
     case "metric":
-      DataTypeParser.metric(response);
+      return DataTypeParser.metric(response);
       break;
     case "select_unique":
-      DataTypeParser.selectUnique(response);
+      return DataTypeParser.selectUnique(response);
       break;
   }
 }
@@ -58,16 +58,7 @@ function inferResult(response, indexTarget) {
   // Metric
   // -------------------------------
   if (typeof response.result == 'number'){
-    //return new Dataset(response, {
-    dataType = 'singular';
-    schema = {
-      records: '',
-      select: [{
-        path: 'result',
-        type: 'string',
-        label: 'Metric'
-      }]
-    }
+    dataType, schema, dataset = DataTypeParser.metric(response);
   }
 
   // Everything else
@@ -77,44 +68,13 @@ function inferResult(response, indexTarget) {
     // Interval w/ single value
     // -------------------------------
     if (response.result[0].timeframe && (typeof response.result[0].value == 'number' || response.result[0].value == null)) {
-      dataType = 'chronological';
-      schema = {
-        records: 'result',
-        select: [
-          {
-            path: indexTarget,
-            type: 'date'
-          },
-          {
-            path: 'value',
-            type: 'number'
-            // format: '10'
-          }
-        ]
-      }
+      dataType, schema, dataset = DataTypeParser.singleValueInterval(response, indexTarget);
     }
 
     // Static GroupBy
     // -------------------------------
     if (typeof response.result[0].result == 'number'){
-      dataType = 'categorical';
-      schema = {
-        records: 'result',
-        select: []
-      };
-      for (var key in response.result[0]){
-        if (response.result[0].hasOwnProperty(key) && key !== 'result'){
-          schema.select.push({
-            path: key,
-            type: 'string'
-          });
-          break;
-        }
-      }
-      schema.select.push({
-        path: 'result',
-        type: 'number'
-      });
+      dataType, schema, dataset = DataTypeParser.staticGroupBy(response);
     }
 
     // Grouped Interval
@@ -148,12 +108,7 @@ function inferResult(response, indexTarget) {
     // Select Unique
     // -------------------------------
     if (typeof response.result[0] == 'string'){
-      dataType = 'nominal';
-      dataset = new Dataset();
-      dataset.appendColumn('unique values', []);
-      each(response.result, function(result, i){
-        dataset.appendRow(result);
-      });
+      dataType, schema, dataset = DataTypeParser.selectUnique(response);
     }
 
     // Funnel
