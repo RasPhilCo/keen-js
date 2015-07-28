@@ -1,5 +1,6 @@
 /* globals: sinon */
 var expect = require("chai").expect;
+var spies = require('chai-spies');
 
 var Keen = require("../../../../src/core"),
     keenHelper = require("../../helpers/test-config");
@@ -15,7 +16,6 @@ describe("Keen.Dataviz", function(){
       eventCollection: "test-collection"
     });
     this.dataviz = new Keen.Dataviz();
-    // console.log(this.dataviz);
   });
   afterEach(function(){
     this.project = null;
@@ -301,6 +301,22 @@ describe("Keen.Dataviz", function(){
     it("should unset chartType by passing null", function(){
       this.dataviz.defaultChartType(null);
       expect(this.dataviz.defaultChartType()).to.not.exist;
+    });
+  });
+
+  describe("#data", function() {
+    it("calls correctly with analysisType", function() {
+      var data = [1, 2, 3, 4, 5];
+      this.dataviz.data({result: data, analysisType: "metric"});
+
+      expect(this.dataviz.data()).to.eq(data);
+    });
+
+    it("calls correctly without analysisType", function() {
+      var data = [1, 2, 3, 4, 5];
+      this.dataviz.data({result: data});
+
+      expect(this.dataviz.data()).to.eq(data);
     });
   });
 

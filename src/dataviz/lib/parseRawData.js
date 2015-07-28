@@ -26,6 +26,35 @@ function parseRawData(response){
   labelSet = self.labels() || null;
   labelMap = self.labelMapping() || null;
 
+
+  if (typeof response.analysisType !== undefined) {
+    dataset, dataType, schema = inferResult(response, indexTarget);
+  } else {
+    dataset, dataType, schema = resultFromAnalysisType(response, indexTarget);
+  }
+  dataset = dataset instanceof Dataset ? dataset : new Dataset(response, schema);
+
+  // Set dataType
+  if (dataType) {
+    self.dataType(dataType);
+  }
+
+  return dataset;
+}
+
+function resultFromAnalysisType(response, indexTarget) {
+  switch(response.analysisType) {
+    case "metric":
+      DataTypeParser.metric(response);
+      break;
+    case "select_unique":
+      DataTypeParser.selectUnique(response);
+      break;
+  }
+}
+
+function inferResult(response, indexTarget) {
+  var dataType, schema, dataset;
   // Metric
   // -------------------------------
   if (typeof response.result == 'number'){
@@ -116,9 +145,20 @@ function parseRawData(response){
       }
     }
 
+    // Select Unique
+    // -------------------------------
+    if (typeof response.result[0] == 'string'){
+      dataType = 'nominal';
+      dataset = new Dataset();
+      dataset.appendColumn('unique values', []);
+      each(response.result, function(result, i){
+        dataset.appendRow(result);
+      });
+    }
+
     // Funnel
     // -------------------------------
-    if (typeof response.result[0] == 'number'){
+    if (typeof response.result[0] == 'number' && response.result.steps != undefined){
       dataType = 'cat-ordinal';
       schema = {
         records: '',
@@ -135,17 +175,6 @@ function parseRawData(response){
       }
     }
 
-    // Select Unique
-    // -------------------------------
-    if (typeof response.result[0] == 'string'){
-      dataType = 'nominal';
-      dataset = new Dataset();
-      dataset.appendColumn('unique values', []);
-      each(response.result, function(result, i){
-        dataset.appendRow(result);
-      });
-    }
-
     // Extraction
     // -------------------------------
     if (dataType === void 0) {
@@ -154,13 +183,5 @@ function parseRawData(response){
     }
 
   }
-
-  dataset = dataset instanceof Dataset ? dataset : new Dataset(response, schema);
-
-  // Set dataType
-  if (dataType) {
-    self.dataType(dataType);
-  }
-
-  return dataset;
+  return dataset, dataType, schema;
 }
