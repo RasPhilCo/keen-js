@@ -67,3 +67,50 @@ DataTypeParser.staticGroupBy = function(response) {
   });
   return dataType, schema, dataset;
 }
+
+DataTypeParser.groupedInterval = function(response, indexTarget) {
+  var dataType, schema, dataset;
+  dataType = 'cat-chronological';
+  schema = {
+    records: 'result',
+    unpack: {
+      index: {
+        path: indexTarget,
+        type: 'date'
+      },
+      value: {
+        path: 'value -> result',
+        type: 'number'
+      }
+    }
+  }
+  for (var key in response.result[0].value[0]){
+    if (response.result[0].value[0].hasOwnProperty(key) && key !== 'result'){
+      schema.unpack.label = {
+        path: 'value -> ' + key,
+        type: 'string'
+      }
+      break;
+    }
+  }
+  return dataType, schema, dataset;
+}
+
+DataTypeParser.funnel = function(response) {
+  var dataType, schema, dataset;
+  dataType = 'cat-ordinal';
+  schema = {
+    records: '',
+    unpack: {
+      index: {
+        path: 'steps -> event_collection',
+        type: 'string'
+      },
+      value: {
+        path: 'result -> ',
+        type: 'number'
+      }
+    }
+  }
+  return dataType, schema, dataset;
+}

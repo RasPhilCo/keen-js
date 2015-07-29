@@ -9,6 +9,7 @@ module.exports = function(raw){
 };
 
 function parseRawData(response){
+  console.log(response.analysisType);
   var self = this,
       schema = {},
       indexBy,
@@ -50,6 +51,9 @@ function resultFromAnalysisType(response, indexTarget) {
     case "select_unique":
       return DataTypeParser.selectUnique(response);
       break;
+    case "group_by":
+      return DataTypeParser.staticGroupBy(response);
+      break;
   }
 }
 
@@ -80,29 +84,7 @@ function inferResult(response, indexTarget) {
     // Grouped Interval
     // -------------------------------
     if (response.result[0].value instanceof Array){
-      dataType = 'cat-chronological';
-      schema = {
-        records: 'result',
-        unpack: {
-          index: {
-            path: indexTarget,
-            type: 'date'
-          },
-          value: {
-            path: 'value -> result',
-            type: 'number'
-          }
-        }
-      }
-      for (var key in response.result[0].value[0]){
-        if (response.result[0].value[0].hasOwnProperty(key) && key !== 'result'){
-          schema.unpack.label = {
-            path: 'value -> ' + key,
-            type: 'string'
-          }
-          break;
-        }
-      }
+      dataType, schema, dataset = DataTypeParser.groupedInterval(response, indexTarget);
     }
 
     // Select Unique
@@ -114,20 +96,7 @@ function inferResult(response, indexTarget) {
     // Funnel
     // -------------------------------
     if (typeof response.result[0] == 'number' && response.result.steps != undefined){
-      dataType = 'cat-ordinal';
-      schema = {
-        records: '',
-        unpack: {
-          index: {
-            path: 'steps -> event_collection',
-            type: 'string'
-          },
-          value: {
-            path: 'result -> ',
-            type: 'number'
-          }
-        }
-      }
+      dataType, schema, dataset = DataTypeParser.funnel(response);
     }
 
     // Extraction
